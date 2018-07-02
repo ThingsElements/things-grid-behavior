@@ -87,7 +87,7 @@ Copyright © HatioLab Inc. All rights reserved.
              */
             data: {
                 type: Object,
-                'observer': '_setGridData'
+                'observer': '_gridDataChanged'
             },
 
             /**
@@ -240,11 +240,6 @@ Copyright © HatioLab Inc. All rights reserved.
             preventMultiClickEvent: {
                 type: Boolean,
                 value: false
-            },
-
-            autoFilter: {
-                type: Boolean,
-                value: false
             }
 
             /**
@@ -384,18 +379,33 @@ Copyright © HatioLab Inc. All rights reserved.
          * 그리드 설정이 모두 완료되었다면 Dataludi Grid를 initialize한다.
          */
         initializeGrid: function() {
-            if (!this._checkInitPossible()) return;
-
-            try {
-                DataLudi.setRootContext('');
-                DataLudi.setAssetRoot(this.gridImageDir);
-                this.grid = DataLudi.createGridView(this.gridContainerId, null, false);
-            } catch (e) {
-                console.log(e);
-                return;
+            // if (!this._checkInitPossible()) return;
+            if(!this.containerEl && this.gridContainerId){
+                this.containerEl = div = document.createElement('div');
+                div.setAttribute('id', this.gridContainerId);
+                div.setAttribute('class', 'grid');
+                document.body.appendChild(div);
+                try {
+                    DataLudi.setRootContext('');
+                    DataLudi.setAssetRoot(this.gridImageDir);
+                    this.grid = DataLudi.createGridView(this.gridContainerId, null, false);
+                } catch (e) {
+                    console.log(e);
+                    return;
+                }
             }
 
+            if (!this.model || !this.columns)
+                return false;
+            
+            if(!this.$[this.gridContainerId]&&this.containerEl){
+                Polymer.dom(this.$$('.grid-container')).insertBefore(this.containerEl, this.$['paginator-container']);
+            }else{
+                return false;
+            }
+            // this.root.insertBefore(this.$['paginator-container'], div);
             try {
+
                 if (Things.THINGS_XMES_THEME_STYLES) this.grid.loadStyles(Things.THINGS_XMES_THEME_STYLES);
                 if (Things.THINGS_XMES_THEME_OPTIONS) this.grid.setOptions(Things.THINGS_XMES_THEME_OPTIONS);
 
@@ -429,8 +439,7 @@ Copyright © HatioLab Inc. All rights reserved.
                 }
 
                 if (this.data) {
-                    this._setGridData(this.data)
-                    // this.dataSet.setRows(this.data);
+                    this.dataSet.setRows(this.data);
                 }
 
                 if (this.grid && this.events) {
@@ -490,17 +499,22 @@ Copyright © HatioLab Inc. All rights reserved.
                     fixedCell: { background: '', borderRight: '', borderBottom: ''}
                   }
                 });
-
+                this.grid._focusHandler = function(event){
+                    if(event){
+                        this.grid._editController.setFocus(true);
+                    }
+                }.bind(this);
                 this.resizeGrid();
                 this.fire('things-grid-configured', this.grid);
 
             } catch (e) {
-                this.fire('things-grid-configure-failed', {
-                    config: this.config,
-                    model: this.model,
-                    columns: this.columns,
-                    error: e
-                });
+                console.log(this.model,this.columns);
+                // this.fire('things-grid-configure-failed', {
+                //     config: this.config,
+                //     model: this.model,
+                //     columns: this.columns,
+                //     error: e
+                // });
             }
         },
 
@@ -593,7 +607,7 @@ Copyright © HatioLab Inc. All rights reserved.
          * @param {Object} columns
          */
         _configurationsChanged: function(model, columns) {
-            if (model && columns && !this.grid) {
+            if (model && columns) {
                 var evtDetail = {
                     config: this.config,
                     model: model,
@@ -683,19 +697,6 @@ Copyright © HatioLab Inc. All rights reserved.
 
                 if(!multilineFlag && ((column.styles && column.styles.iconIndex == 'image-renderer') || (column.editor && column.editor.type == 'multiline'))) {
                     multilineFlag = true;
-                }
-
-                if(this.autoFilter){
-                    var filteredArray = this.model.filter(function(field){
-                        return field.fieldName == column.fieldName && field.dataType=='object';
-                    });
-                    if(filteredArray && filteredArray.length==0){
-                        column.autoFilter = {
-                            'active'     : true,
-                            'ignoreCase' : true,
-                            'displayCase': DataLudi.TextCase.UPPER
-                        };
-                    }
                 }
             }.bind(this));
 
@@ -821,27 +822,25 @@ Copyright © HatioLab Inc. All rights reserved.
         /**
          * 데이터 변경 이벤트 핸들러
          */
-        _setGridData: function() {
-            if(this.grid){
-                var evt = this.fire('things-grid-data-change', this.data, { cancelable: true });
-                if (!evt.defaultPrevented && this.data && this.dataSet) {
-                    if(this.grid) this.grid.commit();
+        _gridDataChanged: function() {
+            var evt = this.fire('things-grid-data-change', this.data, { cancelable: true });
+            if (!evt.defaultPrevented && this.data && this.dataSet) {
+                if(this.grid) this.grid.commit();
 
-                    // 데이터에 extprops_가 있다면 extprops_ 오브젝트를 옆으로 확장한다.
-                    if(this.data && this.data.length > 0 && this.data.forEach) {
-                      this.data.forEach(function(record) {
-                        if(record.extprops_) {
-                          for(key in record.extprops_) {
-                            var val = record.extprops_[key];
-                            record[key] = val;
-                          }
-                        }
-                      });
+                // 데이터에 extprops_가 있다면 extprops_ 오브젝트를 옆으로 확장한다.
+                if(this.data && this.data.length > 0 && this.data.forEach) {
+                  this.data.forEach(function(record) {
+                    if(record.extprops_) {
+                      for(key in record.extprops_) {
+                        var val = record.extprops_[key];
+                        record[key] = val;
+                      }
                     }
-
-                    this.dataSet.setRows(this.data);
-                    this.fire('things-grid-data-changed', this.data);
+                  });
                 }
+
+                this.dataSet.setRows(this.data);
+                this.fire('things-grid-data-changed', this.data);
             }
         },
 
