@@ -186,6 +186,14 @@ Copyright © HatioLab Inc. All rights reserved.
 			this._configureChangedData(changedDataList, 'updated', 'u');
 			this._configureChangedData(changedDataList, 'deleted', 'd');
 			this.writeData = this._handleWriteData(changedDataList);
+			if(app.encryptFields) {
+				this.writeData.forEach(d => {
+					for (const key in d) {
+						if(app.encryptFields.includes(key))
+							d[key] = btoa(d[key])
+					}
+				})
+			}
 			this.fire('things-grid-handle-built-writedata', this.writeData);
 		},
 
