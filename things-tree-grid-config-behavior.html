@@ -422,8 +422,8 @@ Copyright © HatioLab Inc. All rights reserved.
                 // 4. Row Hover Mask & Mask Color
                 this.grid.displayOptions().rowHoverMask().setVisible(true);
 
-                // 5. Empty Data, Empty Grid message.
-                this.grid.displayOptions().setEmptyDataMessage(Things.DataGlobal.t('text.emptyDataMessage'));
+                // 5. Empty Data, Empty Grid message. data가 초기화 되기 전 조회 결과가 없다는 메시지 출력하지 않도록 수정
+                this.grid.displayOptions().setEmptyDataMessage('');
                 this.grid.displayOptions().setEmptyGridMessage(Things.DataGlobal.t('text.emptyGridMessage'));
 
                 // 6. Row Height && Fixed columns
@@ -773,6 +773,8 @@ Copyright © HatioLab Inc. All rights reserved.
          * 데이터 변경 이벤트 핸들러
          */
         _gridDataChanged: function() {
+            // 데이터 셋 시점에 조회 emptyDataMessage 초기화
+            this.grid.displayOptions().setEmptyDataMessage(Things.DataGlobal.t('text.emptyDataMessage'));
             var evt = this.fire('things-grid-data-change', this.data, { cancelable: true });
             if (!evt.defaultPrevented && this.data && this.dataSet) {
                 if(this.grid) this.grid.commit();
