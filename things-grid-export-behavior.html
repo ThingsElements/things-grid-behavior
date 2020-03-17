@@ -105,11 +105,15 @@ Copyright © HatioLab Inc. All rights reserved.
 					new DataLudi.GridExcelExporter().export(this.grid, {
 						target: 'local',
 						fileName: this.exportFileName,
-						numberFormat: '#,###',
 						datetimeFormat: 'yyyy-mm-dd',
+						lookupDisplay: true,
 						rowIndicator: 'hidden',
+						footer: "default",
+						header: "default",
 						async: true,
 						showProgress: true,
+						styledText: true,
+						applyDynamicStyles: true,
 						onFinished: function (grid, error, elapsed) {
 							grid.setColumns(originalColumns);
 						},
@@ -117,7 +121,12 @@ Copyright © HatioLab Inc. All rights reserved.
 							var userData = column.userData();
 							if(typeof v == 'object' && typeof userData == 'object') {
 								var titleField = userData.titleField;
-								return v[titleField];
+								var desc = v['description'];
+								if(desc){
+									return v[titleField]+'('+ desc+')';
+								}else{
+									return v[titleField];
+								}
 							} else {
 								return v;
 							}
